@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiUrl, isApiConfigured } from '../lib/config.js';
 import './Auth.css';
 
 export function Auth({ onLogin, onBack }) {
-
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
   const [authMode, setAuthMode] = useState('login');
 
@@ -97,6 +96,13 @@ export function Auth({ onLogin, onBack }) {
 
     }
 
+    if (!isApiConfigured()) {
+      setAuthError(
+        'API not configured. In Vercel → Project → Settings → Environment Variables, set VITE_API_BASE_URL to your Render backend URL (e.g. https://your-app.onrender.com), then redeploy.'
+      );
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -104,7 +110,7 @@ export function Auth({ onLogin, onBack }) {
       // LOGIN
       if (authMode === 'login') {
 
-        const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+        const response = await fetch(apiUrl('/api/auth/login'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -115,7 +121,13 @@ export function Auth({ onLogin, onBack }) {
           })
         });
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          setAuthError(`Server error (${response.status}). Check Render logs.`);
+          return;
+        }
 
         if (data.ok) {
 
@@ -143,7 +155,7 @@ export function Auth({ onLogin, onBack }) {
       // REGISTER
       else if (authMode === 'register') {
 
-        const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
+        const response = await fetch(apiUrl('/api/auth/register'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -155,7 +167,13 @@ export function Auth({ onLogin, onBack }) {
           })
         });
 
-        const data = await response.json();
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          setAuthError(`Server error (${response.status}). Check Render logs.`);
+          return;
+        }
 
         if (data.ok) {
 
@@ -182,9 +200,16 @@ export function Auth({ onLogin, onBack }) {
 
     } catch (err) {
 
-      console.log(err);
+      console.error(err);
 
-      setAuthError('Connection error. Backend may not be running.');
+      const msg = err?.message || String(err);
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        setAuthError(
+          'Cannot reach the backend. Check: (1) Render service is running, (2) VITE_API_BASE_URL in Vercel matches your Render URL exactly, (3) redeploy Vercel after changing env vars.'
+        );
+      } else {
+        setAuthError(`Connection error: ${msg}`);
+      }
 
     } finally {
 

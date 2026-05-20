@@ -1,3 +1,5 @@
+import { apiUrl } from './config.js'
+
 export function uploadToBackend(blob, filename, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -39,16 +41,14 @@ export function uploadToBackend(blob, filename, onProgress) {
       reject(new Error('Upload aborted.'));
     });
 
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    xhr.open('POST', `${apiBaseUrl}/api/upload`);
+    xhr.open('POST', apiUrl('/api/upload'));
     xhr.send(formData);
   });
 }
 
 export async function getFiles() {
   try {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const res = await fetch(`${apiBaseUrl}/api/files`);
+    const res = await fetch(apiUrl('/api/files'));
     if (!res.ok) throw new Error('Failed to fetch files');
     return await res.json();
   } catch (error) {
@@ -58,8 +58,7 @@ export async function getFiles() {
 
 export async function deleteFile(filename) {
   try {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
-    const res = await fetch(`${apiBaseUrl}/api/files/${encodeURIComponent(filename)}`, {
+    const res = await fetch(apiUrl(`/api/files/${encodeURIComponent(filename)}`), {
       method: 'DELETE'
     });
     if (!res.ok) {

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { apiUrl } from '../lib/config.js';
 import './Settings.css';
 
 export function Settings({ onClose, onLogout }) {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
   const [activeTab, setActiveTab] = useState('profile');
   const [user, setUser] = useState({ name: '', email: '', username: '', bio: '' });
   const [isSaving, setIsSaving] = useState(false);
@@ -19,7 +19,7 @@ export function Settings({ onClose, onLogout }) {
     // Fetch profile
     const token = localStorage.getItem('enhix_token');
     if (!token) return;
-    fetch(`${apiBaseUrl}/api/users/profile`, {
+    fetch(apiUrl('/api/users/profile'), {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     .then(r => r.json())
@@ -40,7 +40,7 @@ export function Settings({ onClose, onLogout }) {
     setIsSaving(true);
     const token = localStorage.getItem('enhix_token');
     try {
-      const res = await fetch(`${apiBaseUrl}/api/users/profile`, {
+      const res = await fetch(apiUrl('/api/users/profile'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(user)
@@ -62,7 +62,7 @@ export function Settings({ onClose, onLogout }) {
     setIsDeleting(true);
     const token = localStorage.getItem('enhix_token');
     try {
-      const res = await fetch(`${apiBaseUrl}/api/users/account`, {
+      const res = await fetch(apiUrl('/api/users/account'), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ password: deletePassword })
@@ -127,7 +127,7 @@ export function Settings({ onClose, onLogout }) {
     setIsChangingPassword(true);
     const token = localStorage.getItem('enhix_token');
     try {
-      const res = await fetch(`${apiBaseUrl}/api/users/password`, {
+      const res = await fetch(apiUrl('/api/users/password'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ currentPassword, newPassword })

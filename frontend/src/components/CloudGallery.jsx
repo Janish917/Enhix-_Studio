@@ -3,14 +3,14 @@ import { motion } from 'framer-motion'
 import { BubbleButton } from './BubbleButton.jsx'
 import { TiltWrapper } from './TiltWrapper.jsx'
 import { SpotlightCard } from './SpotlightCard.jsx'
+import { apiUrl } from '../lib/config.js'
 
 export function CloudGallery({ onClose }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
   useEffect(() => {
-    fetch(`${apiBaseUrl}/api/media`)
+    fetch(apiUrl('/api/media'))
       .then(r => r.json())
       .then(d => {
         setItems(d || [])
@@ -20,7 +20,7 @@ export function CloudGallery({ onClose }) {
         console.error(e)
         setLoading(false)
       })
-  }, [apiBaseUrl])
+  }, [])
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xl p-4 sm:p-6 text-slate-200">
@@ -77,7 +77,7 @@ export function CloudGallery({ onClose }) {
                       <div className="relative aspect-square w-full overflow-hidden rounded-[1.5rem] bg-black/50 border border-white/5">
                         {it.contentType.startsWith('video') ? (
                           <video
-                            src={`${apiBaseUrl}/api/media/${it.id}`}
+                            src={apiUrl(`/api/media/${it.id}`)}
                             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                             muted
                             playsInline
@@ -89,7 +89,7 @@ export function CloudGallery({ onClose }) {
                           />
                         ) : (
                           <img
-                            src={`${apiBaseUrl}/api/media/${it.id}`}
+                            src={apiUrl(`/api/media/${it.id}`)}
                             alt={it.filename}
                             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                             loading="lazy"
@@ -100,7 +100,7 @@ export function CloudGallery({ onClose }) {
                         {/* Hover Actions */}
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 backdrop-blur-[2px]">
                           <a
-                            href={`${apiBaseUrl}/api/media/${it.id}`}
+                            href={apiUrl(`/api/media/${it.id}`)}
                             download={it.filename}
                             className="transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-bold text-xs py-2 px-4 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.2)]"
                           >

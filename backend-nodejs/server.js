@@ -113,11 +113,30 @@ const PORT = process.env.PORT || 4000;
 // Middleware
 app.use(express.json());
 
+const allowedOrigins = (process.env.FRONTEND_URL || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: "*",
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.length === 0) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return callback(null, true);
+    return callback(null, true);
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+app.get("/api/health", (_req, res) => {
+  res.json({
+    ok: true,
+    mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+    uptime: process.uptime()
+  });
+});
 
 // Upload Folder
 const uploadDir = path.join(__dirname, "uploads");
@@ -217,9 +236,12 @@ app.post("/api/auth/register", async (req, res) => {
       password: hashedPassword
     });
 
+    const token = `jwt-token-${newUser._id}`;
+
     res.status(201).json({
       ok: true,
       message: "User registered successfully",
+      token,
       user: {
         id: newUser._id,
         username: newUser.username,
@@ -367,6 +389,9 @@ app.get("/api/media/:filename", (req, res) => {
 });
 
 // START SERVER
-app.listen(PORT, () => {
-  console.log(`ENHIX backend running on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`ENHIX backend running on port ${PORT}`);
+  if (allowedOrigins.length) {
+    console.log("CORS allowed origins:", allowedOrigins.join(", "));
+  }
 });

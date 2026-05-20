@@ -23,6 +23,7 @@ import {
 } from './lib/imagePipeline.js'
 import { processVideo } from './lib/ffmpegPipeline.js'
 import { uploadToBackend } from './lib/api.js'
+import { apiUrl } from './lib/config.js'
 import cv from '@techstark/opencv-js'
 
 const computeCanvasSizeFit = (width, height, maxWidth, maxHeight) => {
@@ -55,7 +56,6 @@ function useTheme() {
 }
 
 function App() {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
   const [showLanding, setShowLanding] = useState(true)
   const [showAuth, setShowAuth] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -178,7 +178,7 @@ function App() {
       if (code && (state === 'google' || state === 'github')) {
         setOauthLoading(`Authenticating with ${state === 'google' ? 'Google' : 'GitHub'}...`);
         try {
-          const endpoint = `${apiBaseUrl}/api/auth/${state}/callback`;
+          const endpoint = apiUrl(`/api/auth/${state}/callback`);
           
           const res = await fetch(endpoint, {
             method: 'POST',
@@ -384,7 +384,7 @@ function App() {
         tool
       }
 
-      const res = await fetch(`${apiBaseUrl}/api/projects/save`, {
+      const res = await fetch(apiUrl('/api/projects/save'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -411,7 +411,7 @@ function App() {
     setShowProjectsModal(true)
     setProjectsLoading(true)
     try {
-      const res = await fetch(`${apiBaseUrl}/api/projects`, {
+      const res = await fetch(apiUrl('/api/projects'), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('enhix_token')}`
         }
@@ -429,7 +429,7 @@ function App() {
   const deleteProject = async (id) => {
     if (!confirm('Are you sure you want to delete this project?')) return
     try {
-      const res = await fetch(`${apiBaseUrl}/api/projects/${id}`, {
+      const res = await fetch(apiUrl(`/api/projects/${id}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('enhix_token')}`
@@ -464,7 +464,7 @@ function App() {
       if (data.mediaInfo && data.mediaInfo.filename) {
         setBusy(`Retrieving project media: ${data.mediaInfo.filename}...`)
         try {
-          const res = await fetch(`${apiBaseUrl}/api/media/${encodeURIComponent(data.mediaInfo.filename)}`)
+          const res = await fetch(apiUrl(`/api/media/${encodeURIComponent(data.mediaInfo.filename)}`))
           if (!res.ok) throw new Error('Media file not found on server')
           const blob = await res.blob()
           const file = new File([blob], data.mediaInfo.filename, { type: blob.type })
@@ -883,7 +883,7 @@ function App() {
   const executeLogout = async () => {
     setIsLoggingOut(true)
     try {
-      await fetch(`${apiBaseUrl}/api/auth/logout`, { method: 'POST' });
+      await fetch(apiUrl('/api/auth/logout'), { method: 'POST' });
     } catch (e) {
       // Ignored
     }
