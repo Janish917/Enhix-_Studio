@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './Auth.css';
 
 export function Auth({ onLogin, onBack }) {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
   const [authMode, setAuthMode] = useState('login');
 
@@ -99,7 +100,7 @@ export function Auth({ onLogin, onBack }) {
       // LOGIN
       if (authMode === 'login') {
 
-        const response = await fetch('http://localhost:4000/api/auth/login', {
+        const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -138,7 +139,7 @@ export function Auth({ onLogin, onBack }) {
       // REGISTER
       else if (authMode === 'register') {
 
-        const response = await fetch('http://localhost:4000/api/auth/register', {
+        const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

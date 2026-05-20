@@ -159,7 +159,7 @@ app.post("/api/auth/login", loginLimiter, async (req, res) => {
     if (!user) {
       return res.status(401).json({
         ok: false,
-        message: "Invalid credentials"
+        message: "Incorrect email entered"
       });
     }
 
@@ -168,7 +168,7 @@ app.post("/api/auth/login", loginLimiter, async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         ok: false,
-        message: "Invalid credentials"
+        message: "Incorrect password"
       });
     }
 
