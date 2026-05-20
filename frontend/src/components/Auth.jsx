@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import './Auth.css';
 
 export function Auth({ onLogin, onBack }) {
+
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 
   const [authMode, setAuthMode] = useState('login');
@@ -10,7 +11,6 @@ export function Auth({ onLogin, onBack }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -79,6 +79,8 @@ export function Auth({ onLogin, onBack }) {
 
   const handleSubmit = async (e) => {
 
+    console.log("LOGIN CLICKED");
+
     e.preventDefault();
 
     setAuthError('');
@@ -87,8 +89,10 @@ export function Auth({ onLogin, onBack }) {
     if (authMode === 'register') {
 
       if (Object.values(pwValidations).some(v => !v)) {
+
         setAuthError('Please meet all password requirements.');
         return;
+
       }
 
     }
@@ -177,6 +181,8 @@ export function Auth({ onLogin, onBack }) {
       }
 
     } catch (err) {
+
+      console.log(err);
 
       setAuthError('Connection error. Backend may not be running.');
 

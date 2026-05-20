@@ -11,11 +11,102 @@ const rateLimit = require("express-rate-limit");
 
 const User = require("./models/User");
 
+// Turn off Mongoose query buffering globally so operations fail/fallback immediately when disconnected
+mongoose.set('bufferCommands', false);
+
+const dbFilePath = path.join(__dirname, "db.json");
+
+// Read local JSON file db
+function readLocalDB() {
+  try {
+    if (!fs.existsSync(dbFilePath)) {
+      fs.writeFileSync(dbFilePath, JSON.stringify({ users: [] }, null, 2));
+    }
+    return JSON.parse(fs.readFileSync(dbFilePath, "utf8"));
+  } catch (err) {
+    return { users: [] };
+  }
+}
+
+// Write local JSON file db
+function writeLocalDB(data) {
+  try {
+    fs.writeFileSync(dbFilePath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error("Failed to write to local db:", err);
+  }
+}
+
+// UserDB proxy that falls back to db.json when MongoDB is disconnected
+const UserDB = {
+  async findOne({ email }) {
+    if (mongoose.connection.readyState === 1) {
+      try {
+        return await User.findOne({ email });
+      } catch (err) {
+        console.error("MongoDB findOne failed, falling back to local DB:", err);
+      }
+    }
+    const db = readLocalDB();
+    const user = db.users.find(u => u.email === email);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      password: user.password,
+      createdAt: user.createdAt
+    };
+  },
+
+  async findById(id) {
+    if (mongoose.connection.readyState === 1) {
+      try {
+        return await User.findById(id);
+      } catch (err) {
+        console.error("MongoDB findById failed, falling back to local DB:", err);
+      }
+    }
+    const db = readLocalDB();
+    const user = db.users.find(u => u._id === id);
+    if (!user) return null;
+    return {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      password: user.password,
+      createdAt: user.createdAt
+    };
+  },
+
+  async create({ username, email, password }) {
+    if (mongoose.connection.readyState === 1) {
+      try {
+        return await User.create({ username, email, password });
+      } catch (err) {
+        console.error("MongoDB create failed, falling back to local DB:", err);
+      }
+    }
+    const db = readLocalDB();
+    const id = "local-user-" + Math.random().toString(36).substr(2, 9);
+    const newUser = {
+      _id: id,
+      username,
+      email,
+      password,
+      createdAt: new Date()
+    };
+    db.users.push(newUser);
+    writeLocalDB(db);
+    return newUser;
+  }
+};
+
 const app = express();
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
-  .catch(err => console.log(err));
+  .catch(err => console.log("MongoDB Connection Error:", err.message));
 
 const PORT = process.env.PORT || 4000;
 
@@ -109,7 +200,7 @@ app.post("/api/auth/register", async (req, res) => {
 
     const { username, email, password } = req.body;
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await UserDB.findOne({ email });
 
     if (existingUser) {
       return res.status(400).json({
@@ -120,7 +211,7 @@ app.post("/api/auth/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
+    const newUser = await UserDB.create({
       username,
       email,
       password: hashedPassword
@@ -154,7 +245,7 @@ app.post("/api/auth/login", loginLimiter, async (req, res) => {
 
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    const user = await UserDB.findOne({ email });
 
     if (!user) {
       return res.status(401).json({
@@ -211,7 +302,7 @@ const verifyToken = async (req, res, next) => {
 
   const userId = token.replace("jwt-token-", "");
 
-  const user = await User.findById(userId);
+  const user = await UserDB.findById(userId);
 
   if (!user) {
     return res.status(401).json({
