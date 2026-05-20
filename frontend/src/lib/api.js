@@ -39,14 +39,16 @@ export function uploadToBackend(blob, filename, onProgress) {
       reject(new Error('Upload aborted.'));
     });
 
-    xhr.open('POST', '/api/upload');
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    xhr.open('POST', `${apiBaseUrl}/api/upload`);
     xhr.send(formData);
   });
 }
 
 export async function getFiles() {
   try {
-    const res = await fetch('/api/files');
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const res = await fetch(`${apiBaseUrl}/api/files`);
     if (!res.ok) throw new Error('Failed to fetch files');
     return await res.json();
   } catch (error) {
@@ -56,7 +58,8 @@ export async function getFiles() {
 
 export async function deleteFile(filename) {
   try {
-    const res = await fetch(`/api/files/${encodeURIComponent(filename)}`, {
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    const res = await fetch(`${apiBaseUrl}/api/files/${encodeURIComponent(filename)}`, {
       method: 'DELETE'
     });
     if (!res.ok) {

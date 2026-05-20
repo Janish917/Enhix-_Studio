@@ -55,9 +55,11 @@ function useTheme() {
 }
 
 function App() {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
   const [showLanding, setShowLanding] = useState(true)
   const [showAuth, setShowAuth] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showGallery, setShowGallery] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -166,14 +168,61 @@ function App() {
   const timelineRef = useRef(null)
   const estimateOutputTimeoutRef = useRef(null)
 
-  // Session Restore on Mount
+  // Session Restore and OAuth Callback handling on Mount
   useEffect(() => {
-    const token = localStorage.getItem('enhix_token')
-    if (token) {
-      setIsAuthenticated(true)
-      setShowLanding(false)
-    }
-  }, [])
+    const checkAuthAndCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+
+      if (code && (state === 'google' || state === 'github')) {
+        setOauthLoading(`Authenticating with ${state === 'google' ? 'Google' : 'GitHub'}...`);
+        try {
+          const endpoint = `${apiBaseUrl}/api/auth/${state}/callback`;
+          
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              code, 
+              redirectUri: window.location.origin 
+            })
+          });
+          
+          const data = await res.json();
+          if (data.ok) {
+            localStorage.setItem("enhix_token", data.token);
+            localStorage.setItem("enhix_user", JSON.stringify(data.user));
+            setIsAuthenticated(true);
+            setShowLanding(false);
+            setShowAuth(false);
+            showToast(`Signed in successfully with ${state === 'google' ? 'Google' : 'GitHub'}!`, 'success');
+          } else {
+            showToast(data.message || `${state === 'google' ? 'Google' : 'GitHub'} sign-in failed.`, 'error');
+            setShowAuth(true);
+            setShowLanding(false);
+          }
+        } catch (err) {
+          console.error('OAuth callback error:', err);
+          showToast('OAuth network error. Could not connect to authentication server.', 'error');
+          setShowAuth(true);
+          setShowLanding(false);
+        } finally {
+          setOauthLoading(null);
+          // Clean up the URL search params so a refresh doesn't trigger oauth again
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } else {
+        const token = localStorage.getItem('enhix_token');
+        if (token) {
+          setIsAuthenticated(true);
+          setShowLanding(false);
+        }
+      }
+    };
+
+    checkAuthAndCallback();
+  }, []);
 
   const isScrubbing = useRef(false)
 
@@ -335,7 +384,7 @@ function App() {
         tool
       }
 
-      const res = await fetch('/api/projects/save', {
+      const res = await fetch(`${apiBaseUrl}/api/projects/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -362,7 +411,7 @@ function App() {
     setShowProjectsModal(true)
     setProjectsLoading(true)
     try {
-      const res = await fetch('/api/projects', {
+      const res = await fetch(`${apiBaseUrl}/api/projects`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('enhix_token')}`
         }
@@ -380,7 +429,7 @@ function App() {
   const deleteProject = async (id) => {
     if (!confirm('Are you sure you want to delete this project?')) return
     try {
-      const res = await fetch(`/api/projects/${id}`, {
+      const res = await fetch(`${apiBaseUrl}/api/projects/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('enhix_token')}`
@@ -415,7 +464,7 @@ function App() {
       if (data.mediaInfo && data.mediaInfo.filename) {
         setBusy(`Retrieving project media: ${data.mediaInfo.filename}...`)
         try {
-          const res = await fetch(`/api/media/${encodeURIComponent(data.mediaInfo.filename)}`)
+          const res = await fetch(`${apiBaseUrl}/api/media/${encodeURIComponent(data.mediaInfo.filename)}`)
           if (!res.ok) throw new Error('Media file not found on server')
           const blob = await res.blob()
           const file = new File([blob], data.mediaInfo.filename, { type: blob.type })
@@ -834,7 +883,7 @@ function App() {
   const executeLogout = async () => {
     setIsLoggingOut(true)
     try {
-      await fetch('http://localhost:4000/api/auth/logout', { method: 'POST' });
+      await fetch(`${apiBaseUrl}/api/auth/logout`, { method: 'POST' });
     } catch (e) {
       // Ignored
     }
@@ -941,7 +990,20 @@ function App() {
 
   return (
     <>
-      {}
+      <AnimatePresence>
+        {oauthLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/85 backdrop-blur-xl"
+          >
+             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(99,102,241,0.5)]"></div>
+             <p className="text-slate-200 text-lg font-bold tracking-wider font-['Space_Grotesk']">{oauthLoading}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {toast.visible && (
           <motion.div

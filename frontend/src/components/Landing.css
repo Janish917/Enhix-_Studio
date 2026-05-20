@@ -279,3 +279,23 @@
   align-self: flex-start;
   border-bottom-left-radius: 4px;
 }
+
+/* Dashboard Mockup Keyframes */
+@keyframes eq-dance {
+  0%, 100% { height: 4px; }
+  50% { height: 26px; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.02); }
+}
+
+.dashboard-eq-bar {
+  animation: eq-dance 1.1s ease-in-out infinite;
+}
+
+.dashboard-pulse-glow {
+  animation: pulse-glow 2.2s infinite ease-in-out;
+  transform-origin: center;
+}
