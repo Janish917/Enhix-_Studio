@@ -130,6 +130,15 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+app.get("/", (_req, res) => {
+  res.json({
+    ok: true,
+    service: "ENHIX API",
+    health: "/api/health",
+    message: "Backend is running. Use /api/health to verify MongoDB."
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
