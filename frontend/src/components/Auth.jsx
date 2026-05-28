@@ -18,6 +18,12 @@ export function Auth({ onLogin, onBack }) {
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // OTP Verification States
+  const [step, setStep] = useState('auth'); // 'auth' or 'otp'
+  const [otpInput, setOtpInput] = useState('');
+  const [demoOtp, setDemoOtp] = useState('');
+  const [tempEmail, setTempEmail] = useState('');
+
   const [pwValidations, setPwValidations] = useState({
     length: false,
     uppercase: false,
@@ -78,7 +84,7 @@ export function Auth({ onLogin, onBack }) {
 
   const handleSubmit = async (e) => {
 
-    console.log("LOGIN CLICKED");
+    console.log("LOGIN/REGISTER CLICKED");
 
     e.preventDefault();
 
@@ -130,24 +136,12 @@ export function Auth({ onLogin, onBack }) {
         }
 
         if (data.ok) {
-
-          localStorage.setItem('enhix_token', data.token);
-
-          localStorage.setItem(
-            'enhix_user',
-            JSON.stringify(data.user)
-          );
-
-          setAuthSuccess('Login successful');
-
-          setTimeout(() => {
-            onLogin();
-          }, 1000);
-
+          setTempEmail(email);
+          setDemoOtp(data.demoOtp || '');
+          setAuthSuccess(data.message || 'OTP sent successfully.');
+          setStep('otp');
         } else {
-
           setAuthError(data.message);
-
         }
 
       }
@@ -176,24 +170,12 @@ export function Auth({ onLogin, onBack }) {
         }
 
         if (data.ok) {
-
-          setAuthSuccess('Account created successfully');
-
-          localStorage.setItem('enhix_token', data.token || '');
-
-          localStorage.setItem(
-            'enhix_user',
-            JSON.stringify(data.user)
-          );
-
-          setTimeout(() => {
-            onLogin();
-          }, 1000);
-
+          setTempEmail(email);
+          setDemoOtp(data.demoOtp || '');
+          setAuthSuccess(data.message || 'OTP sent successfully.');
+          setStep('otp');
         } else {
-
           setAuthError(data.message);
-
         }
 
       }
@@ -218,6 +200,66 @@ export function Auth({ onLogin, onBack }) {
     }
 
   };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (!otpInput || otpInput.length !== 6) {
+      setAuthError('Please enter a 6-digit OTP code.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(apiUrl('/api/auth/verify-otp'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: tempEmail,
+          otp: otpInput
+        })
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        setAuthError(`Server error (${response.status}). Check Render logs.`);
+        return;
+      }
+
+      if (data.ok) {
+        localStorage.setItem('enhix_token', data.token);
+        localStorage.setItem('enhix_user', JSON.stringify(data.user));
+        setAuthSuccess(data.message || 'Verification successful');
+        setTimeout(() => {
+          onLogin();
+        }, 1000);
+      } else {
+        setAuthError(data.message || 'Invalid OTP code');
+      }
+    } catch (err) {
+      console.error(err);
+      setAuthError(`Verification connection error: ${err.message || err}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBackToAuth = () => {
+    setStep('auth');
+    setAuthError('');
+    setAuthSuccess('');
+    setOtpInput('');
+    setDemoOtp('');
+  };
+
 
   const PasswordRequirementsUI = () => (
 
@@ -302,12 +344,21 @@ export function Auth({ onLogin, onBack }) {
         }}
       />
 
-      <button
-        onClick={onBack}
-        className="absolute top-8 left-8 text-white/50 hover:text-white transition flex items-center gap-2 font-medium z-20"
-      >
-        <span>&larr;</span> Back to Home
-      </button>
+      {step === 'otp' ? (
+        <button
+          onClick={handleBackToAuth}
+          className="absolute top-8 left-8 text-white/50 hover:text-white transition flex items-center gap-2 font-medium z-20"
+        >
+          <span>&larr;</span> Back to Credentials
+        </button>
+      ) : (
+        <button
+          onClick={onBack}
+          className="absolute top-8 left-8 text-white/50 hover:text-white transition flex items-center gap-2 font-medium z-20"
+        >
+          <span>&larr;</span> Back to Home
+        </button>
+      )}
 
       <motion.div
         className="auth-card"
@@ -323,162 +374,215 @@ export function Auth({ onLogin, onBack }) {
 
         </div>
 
-        <h2 className="auth-title">
-          {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
-        </h2>
+        {step === 'otp' ? (
+          <>
+            <h2 className="auth-title">Verify OTP</h2>
+            <p className="auth-subtitle">
+              We have sent a verification code to {tempEmail}.
+            </p>
 
-        <p className="auth-subtitle">
-          {authMode === 'login'
-            ? 'Login to continue.'
-            : 'Create your Enhix account.'}
-        </p>
+            <form onSubmit={handleVerifyOtp}>
+              <div className="auth-input-group">
+                <label>Verification Code</label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  className="auth-input otp-code-input"
+                  placeholder="••••••"
+                  value={otpInput}
+                  onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, ''))}
+                  required
+                  autoFocus
+                />
+              </div>
 
-        <form onSubmit={handleSubmit}>
-
-          {authMode === 'register' && (
-
-            <div className="auth-input-group">
-
-              <label>Full Name</label>
-
-              <input
-                type="text"
-                className="auth-input"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-
-            </div>
-
-          )}
-
-          <div className="auth-input-group">
-
-            <label>Email Address</label>
-
-            <input
-              type="email"
-              className="auth-input"
-              placeholder="hello@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-
-          </div>
-
-          <div className="auth-input-group">
-
-            <label>Password</label>
-
-            <div className="relative flex items-center">
-
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className="auth-input pr-10"
-                placeholder="••••••••"
-                value={password}
-                onChange={handlePasswordChange}
-                required
-              />
+              <AnimatePresence>
+                {authError && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[#ff453a] text-sm mb-4 text-center"
+                  >
+                    {authError}
+                  </motion.div>
+                )}
+                {authSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[#32d74b] text-sm mb-4 text-center"
+                  >
+                    {authSuccess}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <button
-                type="button"
-                className="absolute right-3 text-[#8e8e93]"
-                onClick={() => setShowPassword(!showPassword)}
+                type="submit"
+                className="auth-btn-primary"
+                disabled={isLoading}
               >
-                {showPassword ? '👁️' : '🙈'}
+                {isLoading ? 'Verifying...' : 'Verify OTP'}
               </button>
 
+              {demoOtp && (
+                <div className="demo-otp-container">
+                  <div className="demo-otp-header">
+                    <span className="demo-otp-dot" />
+                    Development / Demo Mode Enabled
+                  </div>
+                  <div className="demo-otp-value">
+                    Demo OTP: <span className="otp-monospace">{demoOtp}</span>
+                  </div>
+                  <div className="demo-otp-helper">
+                    In production mode, OTP will be delivered through email.
+                  </div>
+                </div>
+              )}
+            </form>
+
+            <div className="auth-footer">
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBackToAuth();
+                }}
+              >
+                Change email / Go back
+              </a>
             </div>
+          </>
+        ) : (
+          <>
+            <h2 className="auth-title">
+              {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+            </h2>
 
-            {authMode === 'register' && <PasswordRequirementsUI />}
+            <p className="auth-subtitle">
+              {authMode === 'login'
+                ? 'Login to continue.'
+                : 'Create your Enhix account.'}
+            </p>
 
-          </div>
+            <form onSubmit={handleSubmit}>
 
-          <AnimatePresence>
+              {authMode === 'register' && (
+                <div className="auth-input-group">
+                  <label>Full Name</label>
+                  <input
+                    type="text"
+                    className="auth-input"
+                    placeholder="John Doe"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
-            {authError && (
+              <div className="auth-input-group">
+                <label>Email Address</label>
+                <input
+                  type="email"
+                  className="auth-input"
+                  placeholder="hello@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-[#ff453a] text-sm mb-4 text-center"
+              <div className="auth-input-group">
+                <label>Password</label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="auth-input pr-10"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={handlePasswordChange}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 text-[#8e8e93]"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? '👁️' : '🙈'}
+                  </button>
+                </div>
+                {authMode === 'register' && <PasswordRequirementsUI />}
+              </div>
+
+              <AnimatePresence>
+                {authError && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[#ff453a] text-sm mb-4 text-center"
+                  >
+                    {authError}
+                  </motion.div>
+                )}
+                {authSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-[#32d74b] text-sm mb-4 text-center"
+                  >
+                    {authSuccess}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <button
+                type="submit"
+                className="auth-btn-primary"
+                disabled={isLoading}
               >
-                {authError}
-              </motion.div>
+                {isLoading
+                  ? 'Please wait...'
+                  : authMode === 'login'
+                    ? 'Sign In'
+                    : 'Create Account'}
+              </button>
 
-            )}
+            </form>
 
-            {authSuccess && (
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-[#32d74b] text-sm mb-4 text-center"
-              >
-                {authSuccess}
-              </motion.div>
-
-            )}
-
-          </AnimatePresence>
-
-          <button
-            type="submit"
-            className="auth-btn-primary"
-            disabled={isLoading}
-          >
-
-            {isLoading
-              ? 'Please wait...'
-              : authMode === 'login'
-                ? 'Sign In'
-                : 'Create Account'}
-
-          </button>
-
-        </form>
-
-        <div className="auth-footer">
-
-          {authMode === 'login' ? (
-
-            <>
-              Don&apos;t have an account?{' '}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setAuthMode('register');
-                  setAuthError('');
-                }}
-              >
-                Sign up
-              </a>
-            </>
-
-          ) : (
-
-            <>
-              Already have an account?{' '}
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setAuthMode('login');
-                  setAuthError('');
-                }}
-              >
-                Sign in
-              </a>
-            </>
-
-          )}
-
-        </div>
+            <div className="auth-footer">
+              {authMode === 'login' ? (
+                <>
+                  Don&apos;t have an account?{' '}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setAuthMode('register');
+                      setAuthError('');
+                    }}
+                  >
+                    Sign up
+                  </a>
+                </>
+              ) : (
+                <>
+                  Already have an account?{' '}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setAuthMode('login');
+                      setAuthError('');
+                    }}
+                  >
+                    Sign in
+                  </a>
+                </>
+              )}
+            </div>
+          </>
+        )}
 
       </motion.div>
 

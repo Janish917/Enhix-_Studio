@@ -152,3 +152,90 @@
 .auth-footer a:hover {
   text-decoration: underline;
 }
+
+/* OTP Inputs and Demo Badge styles */
+.otp-code-input {
+  letter-spacing: 0.5em;
+  font-size: 1.5rem;
+  text-align: center;
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+}
+
+.demo-otp-container {
+  margin-top: 24px;
+  background: rgba(10, 132, 255, 0.05);
+  border: 1px solid rgba(10, 132, 255, 0.2);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 15px rgba(10, 132, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: glowPulse 3s infinite ease-in-out;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(10, 132, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-color: rgba(10, 132, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(10, 132, 255, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-color: rgba(10, 132, 255, 0.4);
+  }
+}
+
+.demo-otp-header {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0a84ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.demo-otp-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #32d74b;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #32d74b;
+  display: inline-block;
+  animation: dotBlink 1.5s infinite;
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.demo-otp-value {
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.otp-monospace {
+  font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #32d74b;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.demo-otp-helper {
+  font-size: 0.75rem;
+  color: #8e8e93;
+  line-height: 1.4;
+}
+
