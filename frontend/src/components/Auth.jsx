@@ -435,7 +435,7 @@ export function Auth({ onLogin, onBack }) {
                     Demo OTP: <span className="otp-monospace">{demoOtp}</span>
                   </div>
                   <div className="demo-otp-helper">
-                    In production mode, OTP will be delivered through email.
+                    Use OTP 112233 to complete account verification.
                   </div>
                 </div>
               )}
@@ -545,7 +545,7 @@ export function Auth({ onLogin, onBack }) {
                   ? 'Please wait...'
                   : authMode === 'login'
                     ? 'Sign In'
-                    : 'Create Account'}
+                    : 'Send Verification Code'}
               </button>
 
             </form>

@@ -221,6 +221,9 @@ app.post("/api/upload", (req, res) => {
 
 });
 
+// Map to temporarily hold registration details: email -> { username, email, password (hashed), otp, expiresAt }
+const pendingRegistrations = new Map();
+
 // REGISTER
 app.post("/api/auth/register", async (req, res) => {
 
@@ -238,18 +241,128 @@ app.post("/api/auth/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const isDemoMode = process.env.DEMO_OTP_MODE === "true";
+    let otp;
 
-    const newUser = await UserDB.create({
+    if (isDemoMode) {
+      otp = "112233";
+    } else {
+      otp = Math.floor(100000 + Math.random() * 900000).toString();
+    }
+
+    // Save pending registration details
+    pendingRegistrations.set(email, {
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      otp,
+      expiresAt: Date.now() + 15 * 60 * 1000 // 15 minutes validity
     });
+
+    if (isDemoMode) {
+      return res.status(200).json({
+        ok: true,
+        message: "Development / Demo Mode Enabled",
+        demoOtp: "112233"
+      });
+    } else {
+      // Revert to normal email OTP behavior (using Resend API)
+      const apiKey = process.env.EMAIL_PROVIDER_API_KEY;
+      const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+
+      try {
+        const emailRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: email,
+            subject: "ENHIX Verification Code",
+            html: `<p>Your ENHIX verification code is <strong>${otp}</strong></p>`
+          })
+        });
+
+        if (!emailRes.ok) {
+          const errText = await emailRes.text();
+          console.error("Resend API returned error:", errText);
+          throw new Error("SMTP provider error");
+        }
+      } catch (err) {
+        console.error("Failed to send verification email:", err);
+        return res.status(500).json({
+          ok: false,
+          message: "Failed to send verification email. Please try again."
+        });
+      }
+
+      return res.status(200).json({
+        ok: true,
+        message: "Verification code sent to your email."
+      });
+    }
+
+  } catch (err) {
+
+    res.status(500).json({
+      ok: false,
+      message: err.message
+    });
+
+  }
+
+});
+
+// VERIFY OTP
+app.post("/api/auth/verify-otp", async (req, res) => {
+
+  try {
+
+    const { email, otp } = req.body;
+    const isDemoMode = process.env.DEMO_OTP_MODE === "true";
+
+    const pending = pendingRegistrations.get(email);
+    if (!pending || pending.expiresAt < Date.now()) {
+      return res.status(400).json({
+        ok: false,
+        message: "Verification session expired or not found."
+      });
+    }
+
+    const expectedOtp = isDemoMode ? "112233" : pending.otp;
+
+    if (otp !== expectedOtp) {
+      return res.status(400).json({
+        ok: false,
+        message: "Invalid verification code."
+      });
+    }
+
+    // OTP verified, create user in DB
+    const existingUser = await UserDB.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        ok: false,
+        message: "User already exists"
+      });
+    }
+
+    const newUser = await UserDB.create({
+      username: pending.username,
+      email: pending.email,
+      password: pending.password
+    });
+
+    // Remove from pending store
+    pendingRegistrations.delete(email);
 
     const token = `jwt-token-${newUser._id}`;
 
-    res.status(201).json({
+    res.status(200).json({
       ok: true,
-      message: "User registered successfully",
+      message: "Registration completed successfully.",
       token,
       user: {
         id: newUser._id,
