@@ -226,6 +226,8 @@ const pendingRegistrations = new Map();
 
 // REGISTER
 app.post("/api/auth/register", async (req, res) => {
+console.log("REGISTER ROUTE HIT");
+console.log("DEMO_OTP_MODE =", process.env.DEMO_OTP_MODE);
 
   try {
 
