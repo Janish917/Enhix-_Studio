@@ -242,7 +242,9 @@ app.post("/api/auth/register", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const isDemoMode = process.env.DEMO_OTP_MODE === "true";
-    let otp;
+console.log("DEMO_OTP_MODE =", process.env.DEMO_OTP_MODE);
+console.log("isDemoMode =", isDemoMode);    
+let otp;
 
     if (isDemoMode) {
       otp = "112233";
