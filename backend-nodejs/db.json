@@ -1,0 +1,18 @@
+{
+  "users": [
+    {
+      "_id": "local-user-a347fnxoz",
+      "username": "TestUser",
+      "email": "testuser@example.com",
+      "password": "$2b$10$.RY3F/gizk5tIlkXprnDmupOB5sae6CVUZ2pOjAlqvN/kMp5JeyLu",
+      "createdAt": "2026-06-02T06:13:24.941Z"
+    },
+    {
+      "_id": "local-user-7yfotowg0",
+      "username": "Janish",
+      "email": "janishsheoran917@gmail.com",
+      "password": "$2b$10$/gFJbSq8Krsm.S7Noa2W2O/ffNJREu1x061G6XisiWuIGkSRjQKs6",
+      "createdAt": "2026-06-02T06:16:00.780Z"
+    }
+  ]
+}

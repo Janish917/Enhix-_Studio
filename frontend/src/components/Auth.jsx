@@ -136,10 +136,12 @@ export function Auth({ onLogin, onBack }) {
         }
 
         if (data.ok) {
-          setTempEmail(email);
-          setDemoOtp(data.demoOtp || '');
-          setAuthSuccess(data.message || 'OTP sent successfully.');
-          setStep('otp');
+          localStorage.setItem('enhix_token', data.token);
+          localStorage.setItem('enhix_user', JSON.stringify(data.user));
+          setAuthSuccess(data.message || 'Login successful.');
+          setTimeout(() => {
+            onLogin();
+          }, 1000);
         } else {
           setAuthError(data.message);
         }
